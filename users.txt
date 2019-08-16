@@ -1,4 +1,4 @@
 user_1	pass_1	acct_1
-user_2	pass_2	acct_2
+user_2	pass_2	free,freemium,premium
 alice	cat	
 bob	dog	premium

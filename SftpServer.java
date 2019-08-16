@@ -16,14 +16,13 @@ public class SftpServer {
 	int auth;
 	
 	Users users;
+	String curr_user;
+	String curr_account;
 
 	public SftpServer() throws FileNotFoundException {
 		this.openConn = 1;
 		this.auth = REQ_USER;
 		this.users = new Users();
-		for (String key : this.users.userDB.keySet()) {
-			System.out.println(key);
-		}
 	}
 
     public void run(Socket connectionSocket) throws Exception {
@@ -37,13 +36,13 @@ public class SftpServer {
 				new DataOutputStream(connectionSocket.getOutputStream()); )
 		{
 			// Send the greeting
-			outToClient.writeBytes("+CS725 SFTP Service\n");
+			outToClient.writeBytes("+CS725 SFTP Service\0\n");
 
 			while (openConn == 1) {
 				command = inFromClient.readLine(); 
 				command_arr.clear();
 				command_arr.addAll(
-					Arrays.asList(command.split("\\s+"))
+					Arrays.asList(command.split("\\s+|\0"))
 				);
 
 				// Check for valid commands depending on whether user is authenticated
@@ -60,22 +59,42 @@ public class SftpServer {
 				switch (command_arr.get(0)) {
 					case "USER":
 					if (this.users.inUsers(command_arr.get(1))) {
-						if (this.users.needAccPass(command_arr.get(1))) {
-							outToClient.writeBytes(String.format("!%s logged in\n", command_arr.get(1)));
+						this.curr_user = command_arr.get(1);
+						if (!this.users.needAccPass(command_arr.get(1))) {
+							outToClient.writeBytes(String.format("!%s logged in\0\n", command_arr.get(1)));
 							auth = AUTH_DONE;
 						} else {
-							outToClient.writeBytes("+User-id valid, send account and password\n");
+							outToClient.writeBytes("+User-id valid, send account and password\0\n");
 							auth = REQ_ACCT_PASS;
 						}
 					} else {
-						outToClient.writeBytes("-Invalid user-id, try again\n");
+						outToClient.writeBytes("-Invalid user-id, try again\0\n");
+					}
+					break;
+
+					case "ACCT":
+					ArrayList<String> accounts = this.users.getAccounts(this.curr_user);
+					if (accounts.size() > 0) {
+						if (accounts.contains(command_arr.get(1))) {
+							this.curr_account = command_arr.get(1);
+						} else {
+							outToClient.writeBytes("-Invalid account, try again\0\n");
+							break;	
+						}
+					} 
+					if (this.users.getPassword(this.curr_user).equals("")) {
+						outToClient.writeBytes("! Account valid, logged-in\0\n");
+						auth = AUTH_DONE;
+					} else {
+						outToClient.writeBytes("+Account valid, send password\0\n");
+						auth = REQ_PASS;
 					}
 					break;
 
 					case "DONE":
-						outToClient.writeBytes("+CS725 closing connection\n");
-						openConn = 0;
-						break;
+					outToClient.writeBytes("+CS725 closing connection\0\n");
+					openConn = 0;
+					break;
 				}
 			}
 		}

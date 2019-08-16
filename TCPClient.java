@@ -63,7 +63,7 @@ class TCPClient {
 
                 auth == AUTH_DONE && Arrays.asList(cmd).contains(command_arr.get(0))
             ) {
-                outToServer.writeBytes(command + '\n');
+                outToServer.writeBytes(command + '\0' + '\n');
             } else {
                 System.out.println("Invalid command. Please reenter:");
                 continue;
@@ -78,6 +78,14 @@ class TCPClient {
                     auth = AUTH_DONE;
                 } else if (replyMessage.charAt(0) == '+') {
                     auth = REQ_ACCT_PASS;
+                } 
+                break;
+
+                case "ACCT":
+                if (replyMessage.charAt(0) == '!') {
+                    auth = AUTH_DONE;
+                } else if (replyMessage.charAt(0) == '+') {
+                    auth = REQ_PASS;
                 } 
                 break;
 
