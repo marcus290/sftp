@@ -82,12 +82,33 @@ public class SftpServer {
 							break;	
 						}
 					} 
-					if (this.users.getPassword(this.curr_user).equals("")) {
+					if (
+						this.users.getPassword(this.curr_user).equals("") 
+						|| auth == REQ_ACCT
+					) {
 						outToClient.writeBytes("! Account valid, logged-in\0\n");
 						auth = AUTH_DONE;
 					} else {
 						outToClient.writeBytes("+Account valid, send password\0\n");
 						auth = REQ_PASS;
+					}
+					break;
+
+					case "PASS":
+					String pw = this.users.getPassword(this.curr_user);
+					if (pw.equals("") || pw.equals(command_arr.get(1))) {
+						if (
+							this.users.getAccounts(this.curr_user).size() == 0
+							|| auth == REQ_PASS
+						) {
+							outToClient.writeBytes("! Logged in\0\n");
+							auth = AUTH_DONE;
+						} else {
+							outToClient.writeBytes("+Send account\0\n");
+							auth = REQ_ACCT;
+						}
+					} else {
+						outToClient.writeBytes("-Wrong password, try again\0\n");
 					}
 					break;
 

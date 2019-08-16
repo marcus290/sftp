@@ -89,6 +89,14 @@ class TCPClient {
                 } 
                 break;
 
+                case "PASS":
+                if (replyMessage.charAt(0) == '!') {
+                    auth = AUTH_DONE;
+                } else if (replyMessage.charAt(0) == '+') {
+                    auth = REQ_ACCT;
+                } 
+                break;
+
                 case "DONE":
                 if (replyMessage.charAt(0) == '+') {
                     clientSocket.close(); 
