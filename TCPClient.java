@@ -15,12 +15,19 @@ class TCPClient {
     
     public static void main(String argv[]) throws Exception 
     { 
-        String[] cmd = {"DONE"}; 
+        final String[] cmd = {"DONE"}; 
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
         String replyMessage;
         int openConn = 0;
-	
+
+        final int REQ_USER = 0;
+        final int REQ_ACCT_PASS = 1;
+        final int REQ_ACCT = 2;
+        final int REQ_PASS = 3;
+        final int AUTH_DONE = 4;
+        int auth = REQ_USER;
+        
         BufferedReader inFromUser = 
 	        new BufferedReader(new InputStreamReader(System.in)); 
 	
@@ -47,24 +54,39 @@ class TCPClient {
                 Arrays.asList(command.split("\\s+"))
             );
 
-            if (Arrays.asList(cmd).contains(command_arr.get(0))) {
+            // Check for valid commands depending on whether user is authenticated
+            if ( 
+                auth == REQ_USER && command_arr.get(0).equals("USER") || 
+                auth == REQ_ACCT_PASS && command_arr.get(0).matches("ACCT|PASS") ||
+                auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
+                auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
+
+                auth == AUTH_DONE && Arrays.asList(cmd).contains(command_arr.get(0))
+            ) {
                 outToServer.writeBytes(command + '\n');
             } else {
                 System.out.println("Invalid command. Please reenter:");
-                break;
+                continue;
             }
 
-            switch (command_arr.get(0)) {
-                case "DONE":
-                    replyMessage = inFromServer.readLine();
-                    if (replyMessage.charAt(0) == '+') {
-                        System.out.println(replyMessage);
-                        clientSocket.close(); 
-                        openConn = 0;
-                    }
-                    break;
-                
+            replyMessage = inFromServer.readLine();
+            System.out.println(replyMessage);
 
+            switch (command_arr.get(0)) {
+                case "USER":
+                if (replyMessage.charAt(0) == '!') {
+                    auth = AUTH_DONE;
+                } else if (replyMessage.charAt(0) == '+') {
+                    auth = REQ_ACCT_PASS;
+                } 
+                break;
+
+                case "DONE":
+                if (replyMessage.charAt(0) == '+') {
+                    clientSocket.close(); 
+                    openConn = 0;
+                }
+                break;
             }
 
         }

@@ -17,14 +17,14 @@ class TCPServer {
   
 			while(true) { 
 
-			System.out.println("Waiting for a client ..."); 
-			Socket connectionSocket = welcomeSocket.accept(); 
-			System.out.println("Client accepted"); 
-			
-			// Do something
-			SftpServer sftp = new SftpServer();
-			
-			sftp.run(connectionSocket);
+				System.out.println("Waiting for a client ..."); 
+				Socket connectionSocket = welcomeSocket.accept(); 
+				System.out.println("Client accepted"); 
+				
+				// Do something
+				SftpServer sftp = new SftpServer();
+				
+				sftp.run(connectionSocket);
 			} 
 		} 
 		catch(IOException e) {
