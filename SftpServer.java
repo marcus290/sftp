@@ -1,10 +1,12 @@
 import java.io.*; 
-import java.net.*; 
+import java.net.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 
 public class SftpServer {
-	final String[] cmd = {"DONE"}; 
+	final String[] cmd = { "TYPE", "LIST", "DONE"}; 
 	
 	int openConn; 
 	
@@ -18,6 +20,9 @@ public class SftpServer {
 	Users users;
 	String curr_user;
 	String curr_account;
+
+	char type = 'B';
+	final Character[] valid_types = {'A', 'B', 'C'};
 
 	public SftpServer() throws FileNotFoundException {
 		this.openConn = 1;
@@ -75,7 +80,7 @@ public class SftpServer {
 					case "ACCT":
 					ArrayList<String> accounts = this.users.getAccounts(this.curr_user);
 					if (accounts.size() > 0) {
-						if (accounts.contains(command_arr.get(1))) {
+						if (accounts.contains("") || accounts.contains(command_arr.get(1))) {
 							this.curr_account = command_arr.get(1);
 						} else {
 							outToClient.writeBytes("-Invalid account, try again\0\n");
@@ -109,6 +114,55 @@ public class SftpServer {
 						}
 					} else {
 						outToClient.writeBytes("-Wrong password, try again\0\n");
+					}
+					break;
+
+					case "TYPE":
+					if (
+						command_arr.size() > 1 && 
+						Arrays.asList(this.valid_types).contains(command_arr.get(1).charAt(0))
+					) {
+						outToClient.writeBytes(String.format(
+							"+Using %s mode\0\n", 
+							command_arr.get(1).equals("A") ? "Ascii" : 
+							command_arr.get(1).equals("B") ? "Binary" : "Continuous"
+						));
+						type = command_arr.get(1).charAt(0);
+					} else {
+						outToClient.writeBytes("-Type not valid\0\n");
+					}
+					break;
+
+					case "LIST":
+					try {
+						if (command_arr.size() == 3) {
+							File f = new File(command_arr.get(2));
+							if (!f.exists())
+								throw new FileNotFoundException();
+							File[] files = f.listFiles();
+							outToClient.writeBytes(String.format("+%s\n", command_arr.get(2)));
+							for (File file: files) {
+								if (command_arr.get(1).equals("V")) {
+									Date modified = new Date(file.lastModified());
+									SimpleDateFormat sdf = new SimpleDateFormat("yyyy MMM dd HH:mm");
+									
+									outToClient.writeBytes(
+										(file.canRead() ? "r" : "-") +
+										(file.canWrite() ? "w" : "-") +
+										(file.canExecute() ? "x" : "-") +
+										String.format(" %10d ", file.length()) +
+										sdf.format(modified) + " "
+									);
+								}
+								outToClient.writeBytes(file.getName() + "\n");
+								
+							}
+							System.out.println("Exited for file loop");	
+							outToClient.writeBytes("\0\n");
+						}
+						
+					} catch (Exception e) {
+						outToClient.writeBytes(String.format("-%s\0\n", e));
 					}
 					break;
 

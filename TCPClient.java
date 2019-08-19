@@ -15,7 +15,7 @@ class TCPClient {
     
     public static void main(String argv[]) throws Exception 
     { 
-        final String[] cmd = {"DONE"}; 
+        final String[] cmd = {"TYPE", "LIST", "DONE"}; 
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
         String replyMessage;
@@ -95,6 +95,19 @@ class TCPClient {
                 } else if (replyMessage.charAt(0) == '+') {
                     auth = REQ_ACCT;
                 } 
+                break;
+
+                case "TYPE":
+                break;
+
+                case "LIST":
+                if (replyMessage.charAt(0) == '+') {
+                    replyMessage = inFromServer.readLine();
+                    while (replyMessage.charAt(0) != '\0') {
+                        System.out.println(replyMessage);
+                        replyMessage = inFromServer.readLine();
+                    }
+                }
                 break;
 
                 case "DONE":
