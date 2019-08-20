@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 public class SftpServer {
-	final String[] cmd = { "TYPE", "LIST", "DONE"}; 
+	final String[] cmd = { "TYPE", "LIST", "CDIR", "KILL", "NAME", "DONE"}; 
 	
 	int openConn; 
 	
@@ -16,6 +16,7 @@ public class SftpServer {
 	final int REQ_PASS = 3;
 	final int AUTH_DONE = 4;
 	int auth;
+	int dir_auth_req = 0;
 	
 	Users users;
 	String curr_user;
@@ -24,15 +25,20 @@ public class SftpServer {
 	char type = 'B';
 	final Character[] valid_types = {'A', 'B', 'C'};
 
+	File curr_dir;
+
 	public SftpServer() throws FileNotFoundException {
 		this.openConn = 1;
 		this.auth = REQ_USER;
 		this.users = new Users();
+		this.curr_dir = new File("./storage/");
 	}
 
     public void run(Socket connectionSocket) throws Exception {
 		String command;
-		ArrayList<String> command_arr = new ArrayList<String>();;
+		ArrayList<String> command_arr = new ArrayList<String>();
+
+		File rf;
 
 		try (
 			BufferedReader inFromClient = new BufferedReader(
@@ -50,13 +56,16 @@ public class SftpServer {
 					Arrays.asList(command.split("\\s+|\0"))
 				);
 
+				boolean to_rename = false;
+
 				// Check for valid commands depending on whether user is authenticated
 				if (!(
-					auth == REQ_USER && command_arr.get(0).equals("USER") || 
-					auth == REQ_ACCT_PASS && command_arr.get(0).matches("ACCT|PASS") ||
-					auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
-					auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
-					auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0))
+					this.auth == REQ_USER && command_arr.get(0).equals("USER") || 
+					this.auth == REQ_ACCT_PASS && command_arr.get(0).matches("ACCT|PASS") ||
+					this.auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
+					this.auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
+					this.auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0)) ||
+					to_rename && command_arr.get(0).equals("TOBE")
 				)) {
 					System.out.println("Invalid command received. Waiting for next command.");
 				}
@@ -67,10 +76,10 @@ public class SftpServer {
 						this.curr_user = command_arr.get(1);
 						if (!this.users.needAccPass(command_arr.get(1))) {
 							outToClient.writeBytes(String.format("!%s logged in\0\n", command_arr.get(1)));
-							auth = AUTH_DONE;
+							this.auth = AUTH_DONE;
 						} else {
 							outToClient.writeBytes("+User-id valid, send account and password\0\n");
-							auth = REQ_ACCT_PASS;
+							this.auth = REQ_ACCT_PASS;
 						}
 					} else {
 						outToClient.writeBytes("-Invalid user-id, try again\0\n");
@@ -90,13 +99,25 @@ public class SftpServer {
 					} 
 					if (
 						this.users.getPassword(this.curr_user).equals("") 
-						|| auth == REQ_ACCT
+						|| this.auth == REQ_ACCT
 					) {
-						outToClient.writeBytes("! Account valid, logged-in\0\n");
-						auth = AUTH_DONE;
+						if (this.dir_auth_req == 1) {
+							if (! (this.curr_dir.canRead() && this.curr_dir.canWrite())) {
+								outToClient.writeBytes("!Changed working dir to " + this.curr_dir + "\0\n");
+								this.dir_auth_req = 0;
+							} else {
+								outToClient.writeBytes("-Cannot connect to " + this.curr_dir 
+								+ ", please send account/password again\0\n");
+								this.auth = REQ_ACCT_PASS;
+								break;
+							}
+						} else {
+							outToClient.writeBytes("! Account valid, logged-in\0\n");
+						}
+						this.auth = AUTH_DONE;
 					} else {
 						outToClient.writeBytes("+Account valid, send password\0\n");
-						auth = REQ_PASS;
+						this.auth = REQ_PASS;
 					}
 					break;
 
@@ -105,13 +126,25 @@ public class SftpServer {
 					if (pw.equals("") || (command_arr.size() > 1 && pw.equals(command_arr.get(1)))) {
 						if (
 							this.users.getAccounts(this.curr_user).size() == 0
-							|| auth == REQ_PASS
+							|| this.auth == REQ_PASS
 						) {
-							outToClient.writeBytes("! Logged in\0\n");
-							auth = AUTH_DONE;
+							if (this.dir_auth_req == 1) {
+								if (! (this.curr_dir.canRead() && this.curr_dir.canWrite())) {
+									outToClient.writeBytes("!Changed working dir to " + this.curr_dir + "\0\n");
+									this.dir_auth_req = 0;
+								} else {
+									outToClient.writeBytes("-Cannot connect to " + this.curr_dir 
+									+ ", please send account/password again\0\n");
+									this.auth = REQ_ACCT_PASS;
+									break;
+								}
+							} else {
+								outToClient.writeBytes("! Logged in\0\n");
+							}
+							this.auth = AUTH_DONE;
 						} else {
 							outToClient.writeBytes("+Send account\0\n");
-							auth = REQ_ACCT;
+							this.auth = REQ_ACCT;
 						}
 					} else {
 						outToClient.writeBytes("-Wrong password, try again\0\n");
@@ -136,12 +169,20 @@ public class SftpServer {
 
 					case "LIST":
 					try {
-						if (command_arr.size() == 3) {
-							File f = new File(command_arr.get(2));
+						if (command_arr.size() >= 1) {
+							File f;
+							if (command_arr.size() == 2) {
+								f = this.curr_dir;
+							} else {
+								f = new File(command_arr.get(2));
+							}
 							if (!f.exists())
 								throw new FileNotFoundException();
 							File[] files = f.listFiles();
-							outToClient.writeBytes(String.format("+%s\n", command_arr.get(2)));
+							outToClient.writeBytes(String.format(
+								"+%s\n", 
+								(command_arr.size() == 2) ? this.curr_dir : command_arr.get(2)
+							));
 							for (File file: files) {
 								if (command_arr.get(1).equals("V")) {
 									Date modified = new Date(file.lastModified());
@@ -163,6 +204,78 @@ public class SftpServer {
 						
 					} catch (Exception e) {
 						outToClient.writeBytes(String.format("-%s\0\n", e));
+					}
+					break;
+
+					case "CDIR":
+					if (command_arr.size() > 1) {
+						File nf = new File(command_arr.get(1));
+						if (nf.isDirectory()) {
+							this.curr_dir = nf;
+							if (this.curr_dir.canRead() && this.curr_dir.canWrite()) {
+								outToClient.writeBytes(
+									"!Changed working dir to " + command_arr.get(1)  + "\0\n"
+								);
+							} else {
+								outToClient.writeBytes("+directory ok, send account/password\0\n");
+								this.auth = REQ_ACCT_PASS;
+								this.dir_auth_req = 1;
+							}
+						} else {
+							outToClient.writeBytes(
+								"-Can't connect to directory because invalid directory specified\0\n"
+							);
+						}
+					} else {
+						outToClient.writeBytes("-Can't connect to directory because no directory specified\0\n");
+					}
+					break;
+
+					case "KILL":
+					if (command_arr.size() > 1) {
+						File df = new File(command_arr.get(1));
+						if (df.isFile()) {
+							try {
+								df.delete();
+							} catch (Exception e) {
+								outToClient.writeBytes(String.format("-Not deleted because %s\0\n", e));
+							}
+						} else {
+							outToClient.writeBytes(
+								"-Not deleted because the file was not found\0\n"
+							);
+						}
+					} else {
+						outToClient.writeBytes("-Not deleted because no file specified\0\n");
+					}
+					break;
+
+					case "NAME":
+					if (command_arr.size() > 1) {
+						rf = new File(command_arr.get(1));
+						if (rf.isFile()) {
+							outToClient.writeBytes("+File exists\0\n");
+							to_rename = true;
+						} else {
+							outToClient.writeBytes("-Can't find " + command_arr.get(1) + "\0\n");
+						}
+					} else {
+						outToClient.writeBytes("-File wasn't renamed because no file specified\0\n");
+					}
+					break;
+
+					case "TOBE":
+					if (command_arr.size() > 1) {
+						File new_name = new File(command_arr.get(1));
+						try {
+							if (rf.renameTo(new_name)) {
+								to_rename = false;
+							}
+						} catch (Exception e) {
+							outToClient.writeBytes(String.format("-File not renamed because %s\0\n", e));
+						}
+					} else {
+						outToClient.writeBytes("-File wasn't renamed because no file specified\0\n");
 					}
 					break;
 

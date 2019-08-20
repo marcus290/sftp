@@ -8,14 +8,12 @@ import java.io.*;
 import java.net.*; 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-
 
 class TCPClient { 
     
     public static void main(String argv[]) throws Exception 
     { 
-        final String[] cmd = {"TYPE", "LIST", "DONE"}; 
+        final String[] cmd = {"TYPE", "LIST", "CDIR", "KILL", "DONE"}; 
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
         String replyMessage;
@@ -108,6 +106,15 @@ class TCPClient {
                         replyMessage = inFromServer.readLine();
                     }
                 }
+                break;
+
+                case "CDIR":
+                if (replyMessage.charAt(0) == '+') {
+                    auth = REQ_ACCT_PASS;
+                }
+                break;
+
+                case "KILL":
                 break;
 
                 case "DONE":
