@@ -307,6 +307,15 @@ public class SftpServer {
 					}
 					break;
 
+					case "SEND":
+					break;
+
+					case "STOP":
+					to_send = false;
+					retr_size = 0;
+					outToClient.writeBytes("+ok, RETR aborted\0\n");
+					break;
+
 					case "DONE":
 					outToClient.writeBytes("+CS725 closing connection\0\n");
 					openConn = 0;

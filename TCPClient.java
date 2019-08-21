@@ -30,6 +30,8 @@ class TCPClient {
 
         boolean to_rename = false;
         boolean to_send = false;
+
+        long retr_size;
         
         BufferedReader inFromUser = 
 	        new BufferedReader(new InputStreamReader(System.in)); 
@@ -138,8 +140,18 @@ class TCPClient {
                 break;
 
                 case "RETR":
-                if (replyMessage.matches("\\d+.*")) {
+                if (replyMessage.matches("\\d+\0")) {
                     to_send = true;
+                    retr_size = Long.parseLong(replyMessage.substring(0, replyMessage.length() - 1));
+                }
+                break;
+
+                case "SEND":
+                break;
+
+                case "STOP":
+                if (replyMessage.charAt(0) == '+') {
+                    to_send = false;
                 }
                 break;
 
