@@ -6,7 +6,9 @@ import java.util.Arrays;
 import java.util.Date;
 
 public class SftpServer {
-	final String[] cmd = { "TYPE", "LIST", "CDIR", "KILL", "NAME", "DONE"}; 
+	final String[] cmd = { 
+		"TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "DONE"
+	}; 
 	
 	int openConn; 
 	
@@ -39,6 +41,12 @@ public class SftpServer {
 		ArrayList<String> command_arr = new ArrayList<String>();
 
 		File rf = new File(""); // Create placeholder File object for NAME command
+		File sf = new File(""); // Create placeholder File object for RETR command
+
+		boolean to_rename = false;
+		boolean to_send = false;
+
+		long retr_size;
 
 		try (
 			BufferedReader inFromClient = new BufferedReader(
@@ -56,8 +64,6 @@ public class SftpServer {
 					Arrays.asList(command.split("\\s+|\0"))
 				);
 
-				boolean to_rename = false;
-
 				// Check for valid commands depending on whether user is authenticated
 				if (!(
 					this.auth == REQ_USER && command_arr.get(0).equals("USER") || 
@@ -65,8 +71,9 @@ public class SftpServer {
 					this.auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
 					this.auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
 					this.auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0)) &&
-					(!to_rename) ||
-					to_rename && command_arr.get(0).equals("TOBE")
+					(!to_rename) && (!to_send) ||
+					to_rename && command_arr.get(0).equals("TOBE") ||
+					to_send && command_arr.get(0).matches("SEND|STOP")
 				)) {
 					System.out.println("Invalid command received. Waiting for next command.");
 				}
@@ -282,6 +289,21 @@ public class SftpServer {
 						}
 					} else {
 						outToClient.writeBytes("-File wasn't renamed because no new name specified\0\n");
+					}
+					break;
+
+					case "RETR":
+					if (command_arr.size() > 1) {
+						sf = new File(this.curr_dir, command_arr.get(1));
+						if (sf.isFile()) {
+							retr_size = sf.length();
+							outToClient.writeBytes(String.format("%d\0\n", retr_size));
+							to_send = true;
+						} else {
+							outToClient.writeBytes("-File doesn't exist\0\n");
+						}
+					} else {
+						outToClient.writeBytes("-File not specified\0\n");
 					}
 					break;
 

@@ -13,7 +13,9 @@ class TCPClient {
     
     public static void main(String argv[]) throws Exception 
     { 
-        final String[] cmd = {"TYPE", "LIST", "CDIR", "KILL", "NAME", "DONE"}; 
+        final String[] cmd = {
+            "TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "DONE"
+        }; 
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
         String replyMessage;
@@ -27,6 +29,7 @@ class TCPClient {
         int auth = REQ_USER;
 
         boolean to_rename = false;
+        boolean to_send = false;
         
         BufferedReader inFromUser = 
 	        new BufferedReader(new InputStreamReader(System.in)); 
@@ -62,8 +65,9 @@ class TCPClient {
                 auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
 
                 auth == AUTH_DONE && Arrays.asList(cmd).contains(command_arr.get(0)) &&
-                (!to_rename) ||
-                to_rename && command_arr.get(0).equals("TOBE")
+                (!to_rename) && (!to_send) ||
+                to_rename && command_arr.get(0).equals("TOBE") ||
+                to_send && command_arr.get(0).matches("SEND|STOP")
             ) {
                 outToServer.writeBytes(command + '\0' + '\n');
             } else {
@@ -130,6 +134,12 @@ class TCPClient {
                 case "TOBE":
                 if (replyMessage.charAt(0) == '+') {
                     to_rename = false;
+                }
+                break;
+
+                case "RETR":
+                if (replyMessage.matches("\\d+.*")) {
+                    to_send = true;
                 }
                 break;
 
