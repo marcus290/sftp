@@ -64,7 +64,8 @@ public class SftpServer {
 					this.auth == REQ_ACCT_PASS && command_arr.get(0).matches("ACCT|PASS") ||
 					this.auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
 					this.auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
-					this.auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0)) ||
+					this.auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0)) &&
+					(!to_rename) ||
 					to_rename && command_arr.get(0).equals("TOBE")
 				)) {
 					System.out.println("Invalid command received. Waiting for next command.");
@@ -255,7 +256,7 @@ public class SftpServer {
 
 					case "NAME":
 					if (command_arr.size() > 1) {
-						rf = new File(command_arr.get(1));
+						rf = new File(this.curr_dir, command_arr.get(1));
 						if (rf.isFile()) {
 							outToClient.writeBytes("+File exists\0\n");
 							to_rename = true;
@@ -269,16 +270,18 @@ public class SftpServer {
 
 					case "TOBE":
 					if (command_arr.size() > 1) {
-						File new_name = new File(command_arr.get(1));
+						File new_name = new File(this.curr_dir, command_arr.get(1));
+						String oldName = rf.toString();
 						try {
 							if (rf.renameTo(new_name)) {
 								to_rename = false;
+								outToClient.writeBytes(String.format("+%s renamed to %s\0\n", oldName, new_name));
 							}
 						} catch (Exception e) {
-							outToClient.writeBytes(String.format("-File not renamed because %s\0\n", e));
+							outToClient.writeBytes(String.format("-File wasn't renamed because %s\0\n", e));
 						}
 					} else {
-						outToClient.writeBytes("-File wasn't renamed because no file specified\0\n");
+						outToClient.writeBytes("-File wasn't renamed because no new name specified\0\n");
 					}
 					break;
 
