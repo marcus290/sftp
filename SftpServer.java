@@ -38,7 +38,7 @@ public class SftpServer {
 		String command;
 		ArrayList<String> command_arr = new ArrayList<String>();
 
-		File rf;
+		File rf = new File(""); // Create placeholder File object for NAME command
 
 		try (
 			BufferedReader inFromClient = new BufferedReader(
@@ -233,10 +233,13 @@ public class SftpServer {
 
 					case "KILL":
 					if (command_arr.size() > 1) {
-						File df = new File(command_arr.get(1));
+						File df = new File(this.curr_dir, command_arr.get(1));
+
 						if (df.isFile()) {
 							try {
 								df.delete();
+								System.out.println("File deleted. Continuing...");
+								outToClient.writeBytes(String.format("%s deleted\0\n", command_arr.get(1)));
 							} catch (Exception e) {
 								outToClient.writeBytes(String.format("-Not deleted because %s\0\n", e));
 							}
