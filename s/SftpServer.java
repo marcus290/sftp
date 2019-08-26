@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+// import java.util.Scanner;
 
 public class SftpServer {
 	final String[] cmd = { 
@@ -36,6 +37,37 @@ public class SftpServer {
 		this.curr_dir = new File("./storage/");
 	}
 
+	private void sendFile(File sf, long retr_size, char type, DataOutputStream outputStream) {
+		// Scanner sc = new Scanner(sf);
+		byte[] buffer = new byte[(int) retr_size];
+		
+		try (
+		FileInputStream fis = new FileInputStream(sf);
+		BufferedInputStream bis = new BufferedInputStream(fis);
+		){
+			bis.read(buffer, 0, (int) retr_size);
+
+			switch (type) {
+				case 'A':
+				break;
+
+				case 'B':
+				System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
+				outputStream.write(buffer, 0, (int) retr_size);
+				outputStream.flush();
+				break;
+
+				case 'C':
+				break;
+			}
+			System.out.println("Done.");
+		} catch (Exception e) {
+			System.out.println(e);
+		}
+
+		
+	}
+
     public void run(Socket connectionSocket) throws Exception {
 		String command;
 		ArrayList<String> command_arr = new ArrayList<String>();
@@ -46,7 +78,7 @@ public class SftpServer {
 		boolean to_rename = false;
 		boolean to_send = false;
 
-		long retr_size;
+		long retr_size = 0;
 
 		try (
 			BufferedReader inFromClient = new BufferedReader(
@@ -308,6 +340,9 @@ public class SftpServer {
 					break;
 
 					case "SEND":
+					outToClient.writeBytes("+ok, sending file\0\n");
+					sendFile(sf, retr_size, this.type, outToClient);
+					to_send = false;
 					break;
 
 					case "STOP":
