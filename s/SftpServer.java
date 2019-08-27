@@ -6,7 +6,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-// import java.util.Scanner;
 
 public class SftpServer {
 	final String[] cmd = { 
@@ -36,38 +35,53 @@ public class SftpServer {
 		this.openConn = 1;
 		this.auth = REQ_USER;
 		this.users = new Users();
-		this.curr_dir = new File("./storage/");
+		this.curr_dir = new File("./s/stor/");
 	}
 
-	private void sendFile(File sf, long retr_size, char type, DataOutputStream outputStream) {
-		// Scanner sc = new Scanner(sf);
-		byte[] buffer = new byte[(int) retr_size];
-		
-		try (
-		FileInputStream fis = new FileInputStream(sf);
-		BufferedInputStream bis = new BufferedInputStream(fis);
-		){
-			bis.read(buffer, 0, (int) retr_size);
-
-			switch (type) {
-				case 'A':
-				break;
-
-				case 'B':
-				System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
-				outputStream.write(buffer, 0, (int) retr_size);
+	private void sendFile(File sf, long retr_size, char type, Socket connectionSocket) {
+		switch (type) {
+			case 'A': // Send as ASCII bytes
+			try (
+				FileReader fr = new FileReader(sf);
+				BufferedReader br = new BufferedReader(fr);
+			){
+				BufferedWriter outputStream = new BufferedWriter(new 
+					OutputStreamWriter(connectionSocket.getOutputStream()));
+				char[] cbuffer = new char[(int) retr_size];
+				br.read(cbuffer, 0, (int) retr_size);
+				
+				System.out.println(String.format("File stream buffered and sending %d characters", retr_size));
+				outputStream.write(cbuffer, 0, (int) retr_size);
 				outputStream.flush();
-				break;
-
-				case 'C':
-				break;
+			} catch (Exception e) {
+				System.out.println(e);
 			}
-			System.out.println("Done.");
-		} catch (Exception e) {
-			System.out.println(e);
-		}
+			break;
 
-		
+			case 'B':
+			case 'C':
+			/**There is no difference between binary and continuous modes for machines with 
+             * word sizes which are multiples of 8. All architectures have been using multiples
+             * of 8 since the 1980s, so binary and continuous modes are treated the same here. 
+             */
+			try (
+				FileInputStream fis = new FileInputStream(sf);
+				BufferedInputStream bis = new BufferedInputStream(fis);
+			){
+				DataOutputStream outputStream = 
+					new DataOutputStream(connectionSocket.getOutputStream());
+				byte[] bbuffer = new byte[(int) retr_size];
+				bis.read(bbuffer, 0, (int) retr_size);
+
+				System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
+				outputStream.write(bbuffer, 0, (int) retr_size);
+				outputStream.flush();
+			} catch (Exception e) {
+				System.out.println(e);
+			} 
+			break;
+		}
+		System.out.println("Done.");
 	}
 
     public void run(Socket connectionSocket) throws Exception {
@@ -93,6 +107,7 @@ public class SftpServer {
 
 			while (openConn == 1) {
 				command = inFromClient.readLine(); 
+				if (command == null) continue;
 				command_arr.clear();
 				command_arr.addAll(
 					Arrays.asList(command.split("\\s+|\0"))
@@ -343,7 +358,7 @@ public class SftpServer {
 
 					case "SEND":
 					outToClient.writeBytes("+ok, sending file\0\n");
-					sendFile(sf, retr_size, this.type, outToClient);
+					sendFile(sf, retr_size, this.type, connectionSocket);
 					to_send = false;
 					break;
 

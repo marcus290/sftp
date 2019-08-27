@@ -13,7 +13,7 @@ public class Users {
         this.userDB = new HashMap<String, String[]>();
 
         // Load the users record
-        File file = new File("users.txt");
+        File file = new File("./s/users.txt");
         Scanner sc = new Scanner(file);
         
         /** User data is loaded from txt file and stored in a HashMap

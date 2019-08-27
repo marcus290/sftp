@@ -11,43 +11,65 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 class TCPClient { 
+    static File curr_dir = new File("./c/stor/");
 
-    static private void retrFile(File rf, long retr_size, char type, DataInputStream inputStream) {
-		// Scanner sc = new Scanner(sf);
-		byte[] buffer = new byte[(int) retr_size];
+    static private void retrFile(File rf, long retr_size, char type, Socket clientSocket) {
+        int current = 0;
 		
-		try (
-		FileOutputStream fos = new FileOutputStream(rf);
-		BufferedOutputStream bos = new BufferedOutputStream(fos);
-		){
-			switch (type) {
-				case 'A':
-				break;
+        switch (type) {
+            case 'A':
+            try (
+                FileWriter fw = new FileWriter(rf);
+                BufferedWriter bw = new BufferedWriter(fw);
+            ){
+                BufferedReader asciiFromServer = new BufferedReader(new
+                    InputStreamReader(clientSocket.getInputStream()));
+                char[] cbuffer = new char[(int) retr_size];
+                int charRead;
 
-                case 'B':
-                int current = 0;
+                do {
+                    charRead = asciiFromServer.read(cbuffer, current, (int) retr_size - current);
+                    if(charRead >= 0) current += charRead;
+                    System.out.println(String.format("Read %d of %d characters from stream", current, retr_size));
+                } while(retr_size - current > 0);
+
+                System.out.println(String.format("File stream buffered and writing %d characters", retr_size));
+                bw.write(cbuffer, 0, (int) retr_size);
+                bw.flush();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            break;
+
+            case 'B':
+            case 'C': 
+            /**There is no difference between binary and continuous modes for machines with 
+             * word sizes which are multiples of 8. All architectures have been using multiples
+             * of 8 since the 1980s, so binary and continuous modes are treated the same here. 
+             */
+            try (
+                FileOutputStream fos = new FileOutputStream(rf);
+                BufferedOutputStream bos = new BufferedOutputStream(fos);
+            ){
+                DataInputStream bytesFromServer = new DataInputStream(clientSocket.getInputStream());
+                byte[] bbuffer = new byte[(int) retr_size];
                 int bytesRead;
 
                 do {
-                    bytesRead = inputStream.read(buffer, current, (int) retr_size - current);
+                    bytesRead = bytesFromServer.read(bbuffer, current, (int) retr_size - current);
                     if(bytesRead >= 0) current += bytesRead;
                     System.out.println(String.format("Read %d of %d bytes from stream", current, retr_size));
                 } while(retr_size - current > 0);
 
                 System.out.println(String.format("File stream buffered and writing %d bytes", retr_size));
-                bos.write(buffer, 0, (int) retr_size);
-				bos.flush();
-				break;
-
-				case 'C':
-				break;
-			}
-			System.out.println("Done.");
-		} catch (Exception e) {
-			System.out.println(e);
-		}
-
-		
+                bos.write(bbuffer, 0, (int) retr_size);
+                bos.flush();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            break;
+        }
+        System.out.println("Done.");
 	}
 
     
@@ -192,7 +214,7 @@ class TCPClient {
                     to_send = true;
                     retr_size = Long.parseLong(replyMessage.substring(0, replyMessage.length() - 1));
                     if (command_arr.size() > 1) {
-                        rf = new File(command_arr.get(1));
+                        rf = new File(curr_dir, command_arr.get(1));
                     }
                 }
                 break;
@@ -201,8 +223,7 @@ class TCPClient {
                 if (replyMessage.charAt(0) == '+') {
                     to_send = false;
                 }
-                DataInputStream dataFromServer = new DataInputStream(clientSocket.getInputStream()); 
-                retrFile(rf, retr_size, type, dataFromServer);
+                retrFile(rf, retr_size, type, clientSocket);
                 break;
 
                 case "STOP":

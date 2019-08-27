@@ -1,9 +1,5 @@
-cd c;
-rm *.class;
-rm *.txt;
-rm *.jpg;
-javac TCPClient.java;
-cd ../s;
-rm *.class;
-javac TCPServer.java SftpServer.java Users.java;
-java TCPServer
+rm */*.class;
+rm c/stor/*;
+javac c/TCPClient.java s/TCPServer.java s/SftpServer.java s/Users.java;
+
+java s/TCPServer
