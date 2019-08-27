@@ -76,7 +76,7 @@ class TCPClient {
     public static void main(String argv[]) throws Exception 
     { 
         final String[] cmd = {
-            "TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "DONE"
+            "TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "STOR", "DONE"
         }; 
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
@@ -94,9 +94,12 @@ class TCPClient {
 
         boolean to_rename = false;
         boolean to_send = false;
+        boolean to_stor = false;
 
         long retr_size = 0;
+        long send_size = 0;
         File rf = new File("");
+        File sf = new File("");
         
         BufferedReader inFromUser = 
 	        new BufferedReader(new InputStreamReader(System.in)); 
@@ -132,11 +135,12 @@ class TCPClient {
                 auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
 
                 auth == AUTH_DONE && Arrays.asList(cmd).contains(command_arr.get(0)) &&
-                (!to_rename) && (!to_send) ||
+                (!to_rename) && (!to_send) && (!to_stor) ||
                 to_rename && command_arr.get(0).equals("TOBE") ||
-                to_send && command_arr.get(0).matches("SEND|STOP")
+                to_send && command_arr.get(0).matches("SEND|STOP") ||
+                to_stor && command_arr.get(0).equals("SIZE")
             ) {
-                outToServer.writeBytes(command + '\0' + '\n');
+                outToServer.writeBytes(command + "\0\n");
             } else {
                 System.out.println("Invalid command. Please reenter:");
                 continue;
@@ -230,6 +234,27 @@ class TCPClient {
                 if (replyMessage.charAt(0) == '+') {
                     to_send = false;
                 }
+                break;
+                
+                case "STOR":
+                if (replyMessage.charAt(0) == '+') {
+                    to_stor = true;
+                    if (command_arr.size() > 2) {
+                        sf = new File(curr_dir, command_arr.get(2));
+                    }
+                }
+                break;
+
+                case "SIZE":
+                // if (replyMessage.charAt(0) == '+') {
+                //     if (command_arr.size() > 1) {
+                //         send_size = Long.parseLong(command_arr.get(1));
+                //     }
+                //     // sendFile();
+                //     to_stor = false;
+                // }
+                // retrFile(rf, retr_size, type, clientSocket);
+                to_stor = false;
                 break;
 
                 case "DONE":

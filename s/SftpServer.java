@@ -9,7 +9,7 @@ import java.util.Date;
 
 public class SftpServer {
 	final String[] cmd = { 
-		"TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "DONE"
+		"TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "STOR", "DONE"
 	}; 
 	
 	int openConn; 
@@ -88,11 +88,13 @@ public class SftpServer {
 		String command;
 		ArrayList<String> command_arr = new ArrayList<String>();
 
-		File rf = new File(""); // Create placeholder File object for NAME command
-		File sf = new File(""); // Create placeholder File object for RETR command
+		File rf = new File(""); // Placeholder File object for NAME command
+		File sf = new File(""); // Placeholder File object for RETR command
+		File tf = new File(""); // Placeholder File object for STOR command
 
 		boolean to_rename = false;
 		boolean to_send = false;
+		boolean to_stor = false;
 
 		long retr_size = 0;
 
@@ -120,9 +122,10 @@ public class SftpServer {
 					this.auth == REQ_ACCT && command_arr.get(0).equals("ACCT") ||
 					this.auth == REQ_PASS && command_arr.get(0).equals("PASS") ||
 					this.auth == AUTH_DONE && Arrays.asList(this.cmd).contains(command_arr.get(0)) &&
-					(!to_rename) && (!to_send) ||
+					(!to_rename) && (!to_send) && (!to_stor) ||
 					to_rename && command_arr.get(0).equals("TOBE") ||
-					to_send && command_arr.get(0).matches("SEND|STOP")
+					to_send && command_arr.get(0).matches("SEND|STOP") ||
+					to_stor && command_arr.get(0).equals("SIZE")
 				)) {
 					System.out.println("Invalid command received. Waiting for next command.");
 				}
@@ -366,6 +369,53 @@ public class SftpServer {
 					to_send = false;
 					retr_size = 0;
 					outToClient.writeBytes("+ok, RETR aborted\0\n");
+					break;
+
+					case "STOR":
+					if (command_arr.size() > 2) {
+						tf = new File(this.curr_dir, command_arr.get(2));
+						String mode = command_arr.get(1);
+						switch (mode) {
+							case "NEW":
+							if (!tf.isFile()) {
+								outToClient.writeBytes("+File does not exist, will create new file\0\n");
+							} else {
+								// Modern day operating systems do not support file generations
+								outToClient.writeBytes("-File exists, but system doesn't support generations\0\n");
+								continue;
+							}
+							break;
+							case "OLD":
+							if (tf.isFile()) {
+								outToClient.writeBytes("+Will write over old file\0\n");
+							} else {
+								outToClient.writeBytes("+Will create new file\0\n");
+							}
+							break;
+							case "APP":
+							if (tf.isFile()) {
+								outToClient.writeBytes("+Will append to file\0\n");
+							} else {
+								outToClient.writeBytes("+Will create file\0\n");
+							}
+							break;
+							default:
+							outToClient.writeBytes("-Incorrect STOR mode specified, please try again\0\n");
+							continue;
+						}
+						to_stor = true;
+					} else {
+						outToClient.writeBytes("-Usage: STOR { NEW | OLD | APP } <file-spec>\0\n");
+					}
+					break;
+
+					case "SIZE":
+					boolean enoughMemory = true;
+					if (enoughMemory) {
+						outToClient.writeBytes("+ok, waiting for file\0\n");
+					} else {
+						outToClient.writeBytes("-Not enough room, don't send it\0\n");
+					}
 					break;
 
 					case "DONE":
