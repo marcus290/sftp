@@ -84,6 +84,33 @@ public class SftpServer {
 		System.out.println("Done.");
 	}
 
+	private void storFile(File tf, long stor_size, Socket connectionSocket, String mode) throws Exception {
+        int current = 0;
+		
+		try (
+			FileOutputStream fos = new FileOutputStream(tf, (mode.equals("APP")) ? true : false);
+			BufferedOutputStream bos = new BufferedOutputStream(fos);
+		){
+			DataInputStream bytesFromClient = new DataInputStream(connectionSocket.getInputStream());
+			byte[] bbuffer = new byte[(int) stor_size];
+			int bytesRead;
+
+			do {
+				bytesRead = bytesFromClient.read(bbuffer, current, (int) stor_size - current);
+				if(bytesRead >= 0) current += bytesRead;
+				System.out.println(String.format("Read %d of %d bytes from stream", current, stor_size));
+			} while(stor_size - current > 0);
+
+			System.out.println(String.format("File stream buffered and writing %d bytes", stor_size));
+			bos.write(bbuffer, 0, (int) stor_size);
+			bos.flush();
+			System.out.println("Done.");
+		} catch (Exception e) {
+			System.out.println(e);
+			throw e;
+		}
+	}
+
     public void run(Socket connectionSocket) throws Exception {
 		String command;
 		ArrayList<String> command_arr = new ArrayList<String>();
@@ -97,6 +124,8 @@ public class SftpServer {
 		boolean to_stor = false;
 
 		long retr_size = 0;
+		long stor_size = 0;
+		String mode = "";
 
 		try (
 			BufferedReader inFromClient = new BufferedReader(
@@ -374,7 +403,7 @@ public class SftpServer {
 					case "STOR":
 					if (command_arr.size() > 2) {
 						tf = new File(this.curr_dir, command_arr.get(2));
-						String mode = command_arr.get(1);
+						mode = command_arr.get(1);
 						switch (mode) {
 							case "NEW":
 							if (!tf.isFile()) {
@@ -411,11 +440,20 @@ public class SftpServer {
 
 					case "SIZE":
 					boolean enoughMemory = true;
-					if (enoughMemory) {
+					if (enoughMemory && command_arr.size() > 1) {
+						stor_size = Long.parseLong(command_arr.get(1));
 						outToClient.writeBytes("+ok, waiting for file\0\n");
+						try {
+							storFile(tf, stor_size, connectionSocket, mode);
+							outToClient.writeBytes(String.format("+Saved %s\0\n", tf));
+						} catch (Exception e) {
+							System.out.println(e);
+							outToClient.writeBytes(String.format("-Couldn't save because %s\0\n", e));
+						}
 					} else {
 						outToClient.writeBytes("-Not enough room, don't send it\0\n");
 					}
+					to_stor = false;
 					break;
 
 					case "DONE":

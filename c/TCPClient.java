@@ -70,6 +70,23 @@ class TCPClient {
             break;
         }
         System.out.println("Done.");
+    }
+    
+    static private void storFile(File tf, long retr_size, DataOutputStream outToServer) {
+		try (
+            FileInputStream fis = new FileInputStream(tf);
+            BufferedInputStream bis = new BufferedInputStream(fis);
+        ){
+            byte[] bbuffer = new byte[(int) retr_size];
+            bis.read(bbuffer, 0, (int) retr_size);
+
+            System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
+            outToServer.write(bbuffer, 0, (int) retr_size);
+            outToServer.flush();
+            System.out.println("Done.");
+        } catch (Exception e) {
+            System.out.println(e);
+        } 
 	}
 
     
@@ -97,9 +114,9 @@ class TCPClient {
         boolean to_stor = false;
 
         long retr_size = 0;
-        long send_size = 0;
+        long stor_size = 0;
         File rf = new File("");
-        File sf = new File("");
+        File tf = new File("");
         
         BufferedReader inFromUser = 
 	        new BufferedReader(new InputStreamReader(System.in)); 
@@ -237,23 +254,20 @@ class TCPClient {
                 break;
                 
                 case "STOR":
-                if (replyMessage.charAt(0) == '+') {
+                if (replyMessage.charAt(0) == '+' && command_arr.size() > 2) {
                     to_stor = true;
-                    if (command_arr.size() > 2) {
-                        sf = new File(curr_dir, command_arr.get(2));
-                    }
+                    tf = new File(curr_dir, command_arr.get(2));
+                    System.out.println("Will send " + command_arr.get(2) + " of size " 
+                                        + tf.length() + " bytes");
                 }
                 break;
 
                 case "SIZE":
-                // if (replyMessage.charAt(0) == '+') {
-                //     if (command_arr.size() > 1) {
-                //         send_size = Long.parseLong(command_arr.get(1));
-                //     }
-                //     // sendFile();
-                //     to_stor = false;
-                // }
-                // retrFile(rf, retr_size, type, clientSocket);
+                if (replyMessage.charAt(0) == '+' && command_arr.size() > 1) {
+                    stor_size = Long.parseLong(command_arr.get(1));
+                    storFile(tf, stor_size, outToServer);
+                    System.out.println(inFromServer.readLine());
+                }
                 to_stor = false;
                 break;
 
