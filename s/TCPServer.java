@@ -15,13 +15,9 @@ class TCPServer {
 		
 		try (ServerSocket welcomeSocket = new ServerSocket(6789))
 		{
-			System.out.println("Server started"); 
-  
 			while(true) { 
-
-				System.out.println("Waiting for a client ..."); 
+				// System.out.println("SERVER: Waiting for a client ..."); 
 				Socket connectionSocket = welcomeSocket.accept(); 
-				System.out.println("Client accepted"); 
 				
 				// Do something
 				SftpServer sftp = new SftpServer();

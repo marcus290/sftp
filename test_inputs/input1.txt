@@ -1,0 +1,7 @@
+USER user_not_in_database
+USER user_1
+PASS wrong_password
+PASS pass_1
+ACCT acct_not_in_database
+ACCT acct_1
+DONE

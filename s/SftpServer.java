@@ -50,11 +50,11 @@ public class SftpServer {
 				char[] cbuffer = new char[(int) retr_size];
 				br.read(cbuffer, 0, (int) retr_size);
 				
-				System.out.println(String.format("File stream buffered and sending %d characters", retr_size));
+				System.out.println(String.format("SERVER: File stream buffered and sending %d characters", retr_size));
 				outputStream.write(cbuffer, 0, (int) retr_size);
 				outputStream.flush();
 			} catch (Exception e) {
-				System.out.println(e);
+				System.out.println("SERVER: " + e);
 			}
 			break;
 
@@ -73,15 +73,14 @@ public class SftpServer {
 				byte[] bbuffer = new byte[(int) retr_size];
 				bis.read(bbuffer, 0, (int) retr_size);
 
-				System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
+				System.out.println(String.format("SERVER: File stream buffered and sending %d bytes", retr_size));
 				outputStream.write(bbuffer, 0, (int) retr_size);
 				outputStream.flush();
 			} catch (Exception e) {
-				System.out.println(e);
+				System.out.println("SERVER: " + e);
 			} 
 			break;
 		}
-		System.out.println("Done.");
 	}
 
 	private void storFile(File tf, long stor_size, Socket connectionSocket, String mode) throws Exception {
@@ -98,15 +97,14 @@ public class SftpServer {
 			do {
 				bytesRead = bytesFromClient.read(bbuffer, current, (int) stor_size - current);
 				if(bytesRead >= 0) current += bytesRead;
-				System.out.println(String.format("Read %d of %d bytes from stream", current, stor_size));
+				System.out.println(String.format("SERVER: Read %d of %d bytes from stream", current, stor_size));
 			} while(stor_size - current > 0);
 
-			System.out.println(String.format("File stream buffered and writing %d bytes", stor_size));
+			System.out.println(String.format("SERVER: File stream buffered and writing %d bytes", stor_size));
 			bos.write(bbuffer, 0, (int) stor_size);
 			bos.flush();
-			System.out.println("Done.");
 		} catch (Exception e) {
-			System.out.println(e);
+			System.out.println("SERVER: " + e);
 			throw e;
 		}
 	}
@@ -131,12 +129,13 @@ public class SftpServer {
 			BufferedReader inFromClient = new BufferedReader(
 				new InputStreamReader(connectionSocket.getInputStream())); 
 			DataOutputStream  outToClient = 
-				new DataOutputStream(connectionSocket.getOutputStream()); )
-		{
+				new DataOutputStream(connectionSocket.getOutputStream()); 
+		) {
 			// Send the greeting
 			outToClient.writeBytes("+CS725 SFTP Service\0\n");
 
 			while (openConn == 1) {
+				// Read the command from the client
 				command = inFromClient.readLine(); 
 				if (command == null) continue;
 				command_arr.clear();
@@ -144,7 +143,7 @@ public class SftpServer {
 					Arrays.asList(command.split("\\s+|\0"))
 				);
 
-				// Check for valid commands depending on whether user is authenticated
+				// Check for valid commands depending on whether user is authenticated and server state
 				if (!(
 					this.auth == REQ_USER && command_arr.get(0).equals("USER") || 
 					this.auth == REQ_ACCT_PASS && command_arr.get(0).matches("ACCT|PASS") ||
@@ -156,13 +155,15 @@ public class SftpServer {
 					to_send && command_arr.get(0).matches("SEND|STOP") ||
 					to_stor && command_arr.get(0).equals("SIZE")
 				)) {
-					System.out.println("Invalid command received. Waiting for next command.");
+					System.out.println("SERVER: Invalid command received. Waiting for next command.");
 				}
 
+				// Parse the command
 				switch (command_arr.get(0)) {
 					case "USER":
 					if (command_arr.size() > 1 && this.users.inUsers(command_arr.get(1))) {
 						this.curr_user = command_arr.get(1);
+						// Check if user requires password and/or account
 						if (!this.users.needAccPass(command_arr.get(1))) {
 							outToClient.writeBytes(String.format("!%s logged in\0\n", command_arr.get(1)));
 							this.auth = AUTH_DONE;
@@ -214,7 +215,7 @@ public class SftpServer {
 					String pw = this.users.getPassword(this.curr_user);
 					if (pw.equals("") || (command_arr.size() > 1 && pw.equals(command_arr.get(1)))) {
 						if (
-							this.users.getAccounts(this.curr_user).size() == 0
+							this.users.getAccounts(this.curr_user).contains("")
 							|| this.auth == REQ_PASS
 						) {
 							if (this.dir_auth_req == 1) {
@@ -327,7 +328,7 @@ public class SftpServer {
 						if (df.isFile()) {
 							try {
 								df.delete();
-								System.out.println("File deleted. Continuing...");
+								System.out.println("SERVER: File deleted. Continuing...");
 								outToClient.writeBytes(String.format("%s deleted\0\n", command_arr.get(1)));
 							} catch (Exception e) {
 								outToClient.writeBytes(String.format("-Not deleted because %s\0\n", e));
@@ -447,7 +448,7 @@ public class SftpServer {
 							storFile(tf, stor_size, connectionSocket, mode);
 							outToClient.writeBytes(String.format("+Saved %s\0\n", tf));
 						} catch (Exception e) {
-							System.out.println(e);
+							System.out.println("SERVER:" + e);
 							outToClient.writeBytes(String.format("-Couldn't save because %s\0\n", e));
 						}
 					} else {
@@ -464,8 +465,8 @@ public class SftpServer {
 			}
 		}
 		catch(IOException e) {
-			System.out.println("Reading from socket failed.");
-			System.out.println(e);
+			System.out.println("SERVER: Reading from socket failed.");
+			System.out.println("SERVER: " + e);
 		}
 
     }
