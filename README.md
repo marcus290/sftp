@@ -1,12 +1,31 @@
 # sftp
-A simple sftp client/server for educational purposes only
+A simple sftp client/server according to RFC913 for educational purposes only
+
+The connection is set to `"localhost", 6789`.
+
+`compile.sh` will compile the java source code for client and server.
+`test.sh` will compile the java source code for client and server, initialise the storage directories and then run the functional tests.
+
+The client and server are designed to run in parallel. The directory structure is initialised as follows:
+```
+sftp
+    -> c
+        -> TCPClient.class
+        -> stor (client side storage directory)
+            -> fromClient.txt
+    -> s
+        -> TCPServer.class
+        -> stor (server side storage directory)
+            -> fromServer.txt
+            -> waves.jpg
+    -> test_inputs (contains all client commands for the tests)
+```
 
 ## Tests
 Tests are run via
 ```
 ./tests.sh
 ```
-`tests.sh` will compile the java source code, prepare the server/client directories, and start the server.
 
 ####Test 1 - USER, PASS, ACCT, DONE
 Test 1 starts the server and enters:
@@ -38,14 +57,28 @@ Test 3 checks the output of `LIST F`, `LIST V` and `CDIR` commands. The default 
 `CDIR` will attempt to change to both `C:\\` for Windows and `~/Downloads` for Ubuntu and will fail depending on the operating system. Another `LIST V` will check whether the directory was properly changed.
 
 ####Test 4 - STOR, NAME, KILL
-Test 4 checks the function of `STOR`, `NAME` and `KILL`. The following commands are sent:
-- Various invalid STOR commands, which return error messages
-- Correct STOR command (OLD mode) for `fromClient.txt` (13 bytes), and `SIZE` command
+Test 4 checks the functionality of `STOR`, `NAME` and `KILL`. The following commands are sent:
+- Various invalid `STOR` commands, which return error messages
+- Correct `STOR` command (`OLD` mode) for `fromClient.txt` (13 bytes), and `SIZE` command
 - `LIST V` to show it is saved to the server side
-- Correct STOR command (APP mode) for `fromClient.txt` (13 bytes), and `SIZE` command
+- Correct `STOR` command (APP mode) for `fromClient.txt` (13 bytes), and `SIZE` command
 - `LIST V` to show filesize of `fromClient.txt` has doubled to 26 bytes because append has occurred
 - `NAME` to rename the file to `newNameFromClient.txt`
 - `LIST V` to show renaming done
 - `KILL` to delete the file
 - `LIST V` to show delete successful
 - `DONE`
+
+####Test 5 - RETR, TYPE
+Test 5 checks the functionality of `RETR` and `TYPE` with the following commands:
+- Various invalid `RETR` commands, which return error messages
+- Correct `RETR` command for `waves.jpg`
+- Cancel the retrieval via `STOP`
+- Reenter `RETR` command for `waves.jpg`
+- Confirm the retrieval via `SEND`
+- `TYPE A` (ascii mode), `TYPE B` (binary mode) and `TYPE C` (continuous mode)
+- Switch to `TYPE A` (ascii mode)
+- `RETR` command for `fromServer.txt`, which will be sent by ascii encoding
+- Confirm the retrieval via `SEND`
+- `DONE`
+After closing the connection, we check `waves.jpg` and `fromServer.txt` are successfully retrieved to the client side directory by `cd c/stor; ls`.

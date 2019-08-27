@@ -1,0 +1,14 @@
+USER charlie
+RETR
+RETR test_invalid_filename
+RETR waves.jpg
+STOP
+RETR waves.jpg
+SEND
+TYPE A
+TYPE B
+TYPE C
+TYPE A
+RETR fromServer.txt
+SEND
+DONE

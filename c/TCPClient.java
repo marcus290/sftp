@@ -33,7 +33,6 @@ class TCPClient {
                     System.out.println(String.format("Read %d of %d characters from stream", current, retr_size));
                 } while(retr_size - current > 0);
 
-                System.out.println(String.format("File stream buffered and writing %d characters", retr_size));
                 bw.write(cbuffer, 0, (int) retr_size);
                 bw.flush();
             } catch (Exception e) {
@@ -61,7 +60,6 @@ class TCPClient {
                     System.out.println(String.format("Read %d of %d bytes from stream", current, retr_size));
                 } while(retr_size - current > 0);
 
-                System.out.println(String.format("File stream buffered and writing %d bytes", retr_size));
                 bos.write(bbuffer, 0, (int) retr_size);
                 bos.flush();
             } catch (Exception e) {
@@ -69,7 +67,7 @@ class TCPClient {
             }
             break;
         }
-        System.out.println("Done.");
+        System.out.println(String.format("Finished writing %s (%d bytes) to client", rf, retr_size));
     }
     
     static private void storFile(File tf, long retr_size, DataOutputStream outToServer) {
