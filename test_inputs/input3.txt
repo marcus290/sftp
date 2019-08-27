@@ -1,0 +1,7 @@
+USER charlie
+LIST F
+LIST V
+CDIR C:\\
+CDIR ~/Downloads
+LIST V
+DONE

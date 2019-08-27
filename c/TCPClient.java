@@ -80,10 +80,10 @@ class TCPClient {
             byte[] bbuffer = new byte[(int) retr_size];
             bis.read(bbuffer, 0, (int) retr_size);
 
-            System.out.println(String.format("File stream buffered and sending %d bytes", retr_size));
             outToServer.write(bbuffer, 0, (int) retr_size);
             outToServer.flush();
-            System.out.println("Done.");
+            System.out.println("STOR: Finished sending " + tf + " (" + retr_size + 
+                " bytes) from client to server");
         } catch (Exception e) {
             System.out.println(e);
         } 
@@ -143,6 +143,17 @@ class TCPClient {
             command_arr.addAll(
                 Arrays.asList(command.split("\\s+"))
             );
+
+            // If STOR command, need to do local check for file on client side
+            if (command_arr.get(0).equals("STOR")) {
+                if (command_arr.size() < 3) {
+                    System.out.println("STOR: Not enough arguments, please reenter");
+                    continue;
+                } else if (!(tf = new File(curr_dir, command_arr.get(2))).isFile()) {
+                    System.out.println("STOR: File does not exist in local dir");
+                    continue;
+                }
+            }
 
             // Check for valid commands depending on whether user is authenticated
             if ( 
@@ -256,9 +267,8 @@ class TCPClient {
                 case "STOR":
                 if (replyMessage.charAt(0) == '+' && command_arr.size() > 2) {
                     to_stor = true;
-                    tf = new File(curr_dir, command_arr.get(2));
-                    System.out.println("Will send " + command_arr.get(2) + " of size " 
-                                        + tf.length() + " bytes");
+                    System.out.println("STOR: " + command_arr.get(2) + " (" 
+                                        + tf.length() + " bytes)");
                 }
                 break;
 

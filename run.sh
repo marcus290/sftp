@@ -20,10 +20,16 @@ java s/TCPServer &
 printf "### Test 1: USER, ACCT, PASS with incorrect and correct inputs ###\n\n";
 java c/TCPClient < test_inputs/input1.txt;
 
-# Test users who require (i) no account, (ii) no password, (iii) neither account nor password
+# Tests 2i, 2ii, 2iii: users who require (i) no account, (ii) no password, (iii) neither account nor password
 printf "\n\n### Test 2i: users who require no account ###\n\n";
 java c/TCPClient < test_inputs/input2i.txt;
 printf "\n### Test 2ii: users who require no password ###\n\n";
 java c/TCPClient < test_inputs/input2ii.txt;
 printf "\n### Test 2iii: users who require neither account nor password ###\n\n";
 java c/TCPClient < test_inputs/input2iii.txt;
+
+printf "\n\n### Test 3: LIST F, LIST V, CDIR ###\n\n";
+java c/TCPClient < test_inputs/input3.txt;
+
+printf "\n\n### Test 4: STOR, NAME, KILL ###\n\n";
+java c/TCPClient < test_inputs/input4.txt;

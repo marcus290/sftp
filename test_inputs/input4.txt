@@ -1,0 +1,16 @@
+USER charlie
+STOR
+STOR test_wrong_mode fromClient.txt
+STOR OLD test_invalid_filename
+STOR OLD fromClient.txt
+SIZE 13
+LIST V
+STOR APP fromClient.txt
+SIZE 13
+LIST V
+NAME fromClient.txt
+TOBE newNameFromClient.txt
+LIST V
+KILL newNameFromClient.txt
+LIST V
+DONE

@@ -100,9 +100,9 @@ public class SftpServer {
 				System.out.println(String.format("SERVER: Read %d of %d bytes from stream", current, stor_size));
 			} while(stor_size - current > 0);
 
-			System.out.println(String.format("SERVER: File stream buffered and writing %d bytes", stor_size));
 			bos.write(bbuffer, 0, (int) stor_size);
 			bos.flush();
+			System.out.println(String.format("SERVER: Finished writing %s (%d bytes)", tf, stor_size));
 		} catch (Exception e) {
 			System.out.println("SERVER: " + e);
 			throw e;
@@ -328,8 +328,7 @@ public class SftpServer {
 						if (df.isFile()) {
 							try {
 								df.delete();
-								System.out.println("SERVER: File deleted. Continuing...");
-								outToClient.writeBytes(String.format("%s deleted\0\n", command_arr.get(1)));
+								outToClient.writeBytes(String.format("+%s deleted\0\n", command_arr.get(1)));
 							} catch (Exception e) {
 								outToClient.writeBytes(String.format("-Not deleted because %s\0\n", e));
 							}
