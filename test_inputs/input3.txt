@@ -2,6 +2,6 @@ USER charlie
 LIST F
 LIST V
 CDIR C:\\
-CDIR ~/Downloads
+CDIR /tmp
 LIST V
 DONE

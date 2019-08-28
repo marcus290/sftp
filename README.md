@@ -61,7 +61,7 @@ All 3 users should successfully log in and close the connection via `DONE`.
 
 ### Test 3 - LIST, CDIR, DONE
 Test 3 checks the output of `LIST F`, `LIST V` and `CDIR` commands. The default directory is `./s/stor` which holds the files stored on the server side.
-`CDIR` will attempt to change to `C:\\` for Windows and then  `~/Downloads` for Ubuntu and will return an error depending on the operating system. Another `LIST V` will check whether the directory was properly changed.
+`CDIR` will attempt to change to `C:\\` for Windows and then  `/tmp` for Ubuntu and will return an error depending on the operating system. Another `LIST V` will check whether the directory was properly changed.
 
 ### Test 4 - STOR, NAME, KILL
 Test 4 checks the functionality of `STOR`, `NAME` and `KILL`. The following commands are sent:
