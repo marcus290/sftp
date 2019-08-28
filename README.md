@@ -42,6 +42,7 @@ Test 1 starts the server and enters:
 - an incorrect user account
 - a correct user account, which should result in the user successfully logging in
 - `DONE`
+
 The expected output is:
 ```
 +CS725 SFTP Service
@@ -87,4 +88,5 @@ Test 5 checks the functionality of `RETR` and `TYPE` with the following commands
 - `RETR` command for `fromServer.txt`, which will be sent by ascii encoding
 - Confirm the retrieval via `SEND`
 - `DONE`
+
 After closing the connection, we check `waves.jpg` and `fromServer.txt` are successfully retrieved to the client side directory by `cd c/stor; ls`.
