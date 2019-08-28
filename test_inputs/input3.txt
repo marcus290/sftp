@@ -1,7 +1,7 @@
 USER charlie
 LIST F
 LIST V
-CDIR C:\\
 CDIR /tmp
+CDIR C:\\
 LIST V
 DONE
