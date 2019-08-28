@@ -22,11 +22,11 @@ printf "\n\n##### Test 1: USER, ACCT, PASS, DONE #####\n\n";
 java c/TCPClient < test_inputs/input1.txt;
 
 # Tests 2i, 2ii, 2iii: users who require (i) no account, (ii) no password, (iii) neither account nor password
-printf "\n\n##### Test 2i: users who require no account #####\n\n";
+printf "\n\n##### Test 2i: users who require no account #####\n";
 java c/TCPClient < test_inputs/input2i.txt;
-printf "\n##### Test 2ii: users who require no password #####\n\n";
+printf "\n##### Test 2ii: users who require no password #####\n";
 java c/TCPClient < test_inputs/input2ii.txt;
-printf "\n##### Test 2iii: users who require neither account nor password #####\n\n";
+printf "\n##### Test 2iii: users who require neither account nor password #####\n";
 java c/TCPClient < test_inputs/input2iii.txt;
 
 printf "\n\n##### Test 3: LIST F, LIST V, CDIR #####\n\n";
@@ -37,6 +37,6 @@ java c/TCPClient < test_inputs/input4.txt;
 
 printf "\n\n##### Test 5: RETR, TYPE #####\n\n";
 java c/TCPClient < test_inputs/input5.txt;
-printf "##### Client side directory should include waves.jpg and fromServer.txt retrieved from the server: #####\n";
+printf "##### Client side directory should include waves.jpg and fromServer.txt retrieved from the server: \n";
 cd c/stor;
 ls

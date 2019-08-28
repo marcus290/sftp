@@ -11,13 +11,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 class TCPClient { 
+    // Declare the current client side storage directory
     static File curr_dir = new File("./c/stor/");
 
+    /**
+     * retrFile() handles file transfer to the client from the server for RETR commands
+     * @param rf - file to be retrieved
+     * @param retr_size - file size in bytes
+     * @param type - retrieval mode
+     * @param clientSocket
+     */
     static private void retrFile(File rf, long retr_size, char type, Socket clientSocket) {
         int current = 0;
 		
         switch (type) {
-            case 'A':
+            case 'A': // Read as ASCII stream and save to file
             try (
                 FileWriter fw = new FileWriter(rf);
                 BufferedWriter bw = new BufferedWriter(fw);
@@ -40,7 +48,7 @@ class TCPClient {
             }
             break;
 
-            case 'B':
+            case 'B': // Read as binary stream and save to file
             case 'C': 
             /**There is no difference between binary and continuous modes for machines with 
              * word sizes which are multiples of 8. All architectures have been using multiples
@@ -70,6 +78,12 @@ class TCPClient {
         System.out.println(String.format("Finished writing %s (%d bytes) to client", rf, retr_size));
     }
     
+    /**
+     * storFile() handles sending of files from client to server for STOR commands
+     * @param tf - file to be stored
+     * @param retr_size - file size in bytes
+     * @param outToServer
+     */
     static private void storFile(File tf, long retr_size, DataOutputStream outToServer) {
 		try (
             FileInputStream fis = new FileInputStream(tf);
@@ -90,14 +104,20 @@ class TCPClient {
     
     public static void main(String argv[]) throws Exception 
     { 
+        // Define all valid commands when logged in and in default state
         final String[] cmd = {
             "TYPE", "LIST", "CDIR", "KILL", "NAME", "RETR", "STOR", "DONE"
         }; 
+
+        // Store the connection state (open or closed)
+        int openConn = 0;
+
+        // Declare data structures for holding the commands and reply messages
         String command;
         ArrayList<String> command_arr = new ArrayList<String>();
         String replyMessage;
-        int openConn = 0;
-
+        
+        // Define states for user authentication
         final int REQ_USER = 0;
         final int REQ_ACCT_PASS = 1;
         final int REQ_ACCT = 2;
@@ -105,12 +125,15 @@ class TCPClient {
         final int AUTH_DONE = 4;
         int auth = REQ_USER;
 
+        // Initialise retrieval mode
         char type = 'B';
 
+        // Declare the special client states following NAME, RETR and STOR commands
         boolean to_rename = false;
         boolean to_send = false;
         boolean to_stor = false;
 
+        // Declare variables for storing file details for sending/receiving
         long retr_size = 0;
         long stor_size = 0;
         File rf = new File("");
@@ -166,17 +189,21 @@ class TCPClient {
                 to_send && command_arr.get(0).matches("SEND|STOP") ||
                 to_stor && command_arr.get(0).equals("SIZE")
             ) {
+                // Write the command to the server
                 outToServer.writeBytes(command + "\0\n");
             } else {
                 System.out.println("Invalid command. Please reenter:");
                 continue;
             }
 
+            // Read the reply from the server
             replyMessage = inFromServer.readLine();
             System.out.println(replyMessage);
 
+            // Parse the reply depending on the command sent
             switch (command_arr.get(0)) {
                 case "USER":
+                // Update user authentication state
                 if (replyMessage.charAt(0) == '!') {
                     auth = AUTH_DONE;
                 } else if (replyMessage.charAt(0) == '+') {
@@ -185,6 +212,7 @@ class TCPClient {
                 break;
 
                 case "ACCT":
+                // Update user authentication state
                 if (replyMessage.charAt(0) == '!') {
                     auth = AUTH_DONE;
                 } else if (replyMessage.charAt(0) == '+') {
@@ -193,6 +221,7 @@ class TCPClient {
                 break;
 
                 case "PASS":
+                // Update user authentication state
                 if (replyMessage.charAt(0) == '!') {
                     auth = AUTH_DONE;
                 } else if (replyMessage.charAt(0) == '+') {
@@ -253,6 +282,7 @@ class TCPClient {
                 if (replyMessage.charAt(0) == '+') {
                     to_send = false;
                 }
+                // Call retrFile for the RETR command
                 retrFile(rf, retr_size, type, clientSocket);
                 break;
 
@@ -273,6 +303,7 @@ class TCPClient {
                 case "SIZE":
                 if (replyMessage.charAt(0) == '+' && command_arr.size() > 1) {
                     stor_size = Long.parseLong(command_arr.get(1));
+                    // Call storFile() for the STOR command
                     storFile(tf, stor_size, outToServer);
                     System.out.println(inFromServer.readLine());
                 }
@@ -288,9 +319,5 @@ class TCPClient {
             }
 
         }
-
-
-
-	
     } 
 } 
